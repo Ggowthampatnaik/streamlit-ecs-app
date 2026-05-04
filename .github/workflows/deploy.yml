@@ -1,25 +1,32 @@
-name: Deploy to App Runner
+name: Deploy to ECS
+
 
 on:
   push:
-    branches: ["main"]
+    branches: [ "main" ]
+
 
 permissions:
   id-token: write
   contents: read
 
+
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: streamlit-app
-  APP_RUNNER_SERVICE: streamlit-service
+  ECS_CLUSTER: default
+  ECS_SERVICE: streamlit-app-7fa3
+
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
+
     steps:
     - name: Checkout
       uses: actions/checkout@v3
+
 
     - name: Configure AWS credentials (OIDC)
       uses: aws-actions/configure-aws-credentials@v2
@@ -27,17 +34,24 @@ jobs:
         role-to-assume: arn:aws:iam::493272324412:role/github-ecs-role
         aws-region: ${{ env.AWS_REGION }}
 
+
     - name: Login to ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
-    - name: Build & Push Image
+
+    - name: Build, tag, push image
       run: |
-        IMAGE_LATEST=${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:latest
-        IMAGE_SHA=${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${{ github.sha }}
-    
-        docker build -t $IMAGE_LATEST -t $IMAGE_SHA .
-        docker push $IMAGE_LATEST
-        docker push $IMAGE_SHA
-    
-        echo "IMAGE_URI=$IMAGE_LATEST" >> $GITHUB_ENV
+        docker build -t $ECR_REPOSITORY .
+        docker tag $ECR_REPOSITORY:latest \
+        ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:latest
+        docker push \
+        ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:latest
+
+
+    - name: Deploy to ECS
+      run: |
+        aws ecs update-service \
+          --cluster $ECS_CLUSTER \
+          --service $ECS_SERVICE \
+          --force-new-deployment
