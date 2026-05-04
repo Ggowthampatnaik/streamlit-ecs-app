@@ -1,6 +1,6 @@
 import streamlit as st
 
-st.title("My First App")
+st.title("My First Streamlit App")
 
 if st.button("Click me"):
     st.write("Hello")
