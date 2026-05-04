@@ -33,10 +33,11 @@ jobs:
 
     - name: Build & Push Image
       run: |
-        IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${{ github.sha }}
-
-        docker build -t $IMAGE_URI .
-        docker push $IMAGE_URI
-
-        echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
-
+        IMAGE_LATEST=${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:latest
+        IMAGE_SHA=${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${{ github.sha }}
+    
+        docker build -t $IMAGE_LATEST -t $IMAGE_SHA .
+        docker push $IMAGE_LATEST
+        docker push $IMAGE_SHA
+    
+        echo "IMAGE_URI=$IMAGE_LATEST" >> $GITHUB_ENV
